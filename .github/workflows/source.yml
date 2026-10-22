@@ -1,0 +1,29 @@
+name: Asset-free source checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  source-build-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Check source boundary
+        run: python3 tools/check_source_tree.py
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-arm-none-eabi binutils-arm-none-eabi clang make python3
+      - name: Check required tools (emulator optional)
+        run: ./dev doctor
+      - name: Build and verify original-art game
+        run: ./dev build
+      - name: Run asset-free host tests
+        run: ./dev test

@@ -1,0 +1,120 @@
+#!/usr/bin/env python3
+"""Portable build, test, and launch commands for the public Diablo II GBA source."""
+from __future__ import annotations
+
+import argparse
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parent
+GAMES = {"diablo2": ("verify", "build/Diablo2-GBA.gba"),
+         "den": ("den", "build/Diablo2-Den-of-Evil-GBA.gba")}
+
+
+def run(command: list[str]) -> None:
+    subprocess.run(command, cwd=ROOT, check=True)
+
+
+def locate_mgba() -> str | None:
+    configured = os.environ.get("MGBA")
+    if configured:
+        candidate = shutil.which(configured) or configured
+        if Path(candidate).is_file() and os.access(candidate, os.X_OK):
+            return candidate
+        raise RuntimeError(f"MGBA is set but does not name an executable: {configured}")
+    for name in ("mGBA", "mgba"):
+        if (candidate := shutil.which(name)):
+            return candidate
+    for candidate in (Path.home() / "Applications/mGBA.app/Contents/MacOS/mGBA",
+                      Path("/Applications/mGBA.app/Contents/MacOS/mGBA")):
+        if candidate.is_file() and os.access(candidate, os.X_OK):
+            return str(candidate)
+    return None
+
+
+def doctor(require_emulator: bool = False) -> int:
+    prefix = os.environ.get("PREFIX", "arm-none-eabi-")
+    tools = [("ARM GCC", shutil.which(prefix + "gcc")),
+             ("ARM objcopy", shutil.which(prefix + "objcopy")),
+             ("ARM size", shutil.which(prefix + "size")),
+             ("Make", shutil.which("make")),
+             ("Clang", shutil.which(os.environ.get("CLANG", "clang"))),
+             ("Python 3.10+", sys.executable if sys.version_info >= (3, 10) else None),
+             ("Git", shutil.which("git"))]
+    failed = False
+    for label, path in tools:
+        print(f"{'OK     ' if path else 'MISSING'} {label}" + (f": {path}" if path else ""))
+        failed |= path is None
+    try:
+        mgba = locate_mgba()
+        error = "not installed; only needed for play"
+    except RuntimeError as exc:
+        mgba, error = None, str(exc)
+    print(f"{'OK     ' if mgba else ('MISSING' if require_emulator else 'OPTIONAL')} mGBA: {mgba or error}")
+    return int(failed or (require_emulator and not mgba))
+
+
+def build(game: str) -> None:
+    run(["make", GAMES[game][0]])
+
+
+def play(game: str) -> int:
+    build(game)
+    rom = ROOT / GAMES[game][1]
+    mgba = locate_mgba()
+    if not mgba:
+        raise RuntimeError("mGBA was not found; install it or set MGBA to its executable path")
+    local = ROOT / ".local" / "play" / game
+    dirs = [local / name for name in ("saves", "states", "screenshots")]
+    for directory in dirs:
+        directory.mkdir(parents=True, exist_ok=True)
+    log_path = local / "mgba.log"
+    args = [mgba, "-C", f"savegamePath={dirs[0]}", "-C", f"savestatePath={dirs[1]}",
+            "-C", f"screenshotPath={dirs[2]}", str(rom)]
+    with log_path.open("ab") as log:
+        process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=log,
+                                   stderr=subprocess.STDOUT, start_new_session=True, close_fds=True)
+    print(f"Launched {game} in mGBA (PID {process.pid})\nROM: {rom}\nLog: {log_path}")
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    doctor_parser = commands.add_parser("doctor", help="check build tools; report optional mGBA")
+    doctor_parser.add_argument("--emulator", action="store_true", help="require mGBA")
+    commands.add_parser("build", help="build the original-art default ROM")
+    commands.add_parser("test", help="run asset-free host tests")
+    play_parser = commands.add_parser("play", help="build and launch a profile in mGBA")
+    play_parser.add_argument("game", choices=GAMES, nargs="?", default="diablo2")
+    den = commands.add_parser("den", help="prepare or use the optional private Den profile")
+    den.add_argument("action", choices=("prepare", "status", "build", "test", "play"))
+    args = parser.parse_args()
+    try:
+        if args.command == "doctor":
+            return doctor(args.emulator)
+        if args.command == "build":
+            build("diablo2")
+        elif args.command == "test":
+            run(["make", "test"])
+        elif args.command == "play":
+            return play(args.game)
+        elif args.action in ("prepare", "status"):
+            run([sys.executable, "tools/d2_workspace.py", args.action])
+        elif args.action == "build":
+            build("den")
+        elif args.action == "test":
+            run(["make", "test-den"])
+        else:
+            return play("den")
+        return 0
+    except (OSError, RuntimeError, subprocess.CalledProcessError) as error:
+        print(f"ERROR: {error}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
