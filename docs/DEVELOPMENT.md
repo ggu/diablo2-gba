@@ -59,6 +59,15 @@ Doctor should report `OK` for ARM GCC, ARM objcopy, ARM size, Make, Clang, Pytho
 
 The launcher stores local emulator saves, states, screenshots, and logs in `.local/play/diablo2/`.
 
+Default checks are local-first: run `python3 tools/check_source_tree.py`,
+`./dev doctor`, `./dev build`, and `./dev test` on your machine. GitHub Actions
+is disabled in the repository settings, and the source-check workflow is
+manual-only; it uses a standard GitHub-hosted Ubuntu runner if explicitly
+enabled and dispatched. It does not run automatically for pushes or pull
+requests. Enabling it, dispatching it, or adding automatic triggers requires an
+explicit request. Local verification of the proposed commit is sufficient for
+review; do not wait for a redundant Actions run.
+
 ## Optional Den profile
 
 The imported-art Den profile is not needed to build or contribute to the default game. Preparing it needs Python 3, Git and network access, CMake 3.10 or later, and a native C/C++ compiler with C++20 support. System zlib and bzip2 development libraries are optional; StormLib includes bundled fallbacks. mGBA is required only for playing.
