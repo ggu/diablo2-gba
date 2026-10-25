@@ -7,10 +7,13 @@ The default original-art prototype is the simplest contribution path. It needs n
 ./dev test
 ```
 
-These local checks are the default verification path. GitHub Actions source
-checks are manual-only; enabling or dispatching them requires an explicit
-request. Use the local results when they are sufficient rather than waiting for
-a redundant Actions run.
+Also run `python3 tools/check_source_tree.py` to verify that no private game
+data or generated payloads entered the source tree. These local checks are the
+default verification path. GitHub Actions is disabled in the repository
+settings, and its source workflow is manual-only. Enabling it, dispatching it,
+or adding automatic triggers requires an explicit request. Local verification
+of the proposed commit is sufficient for review; do not wait for a redundant
+Actions run.
 
 Install mGBA only when you want to play the default game: `./dev play diablo2`. See [the game guide](diablo2/README.md) for controls and mechanics.
 

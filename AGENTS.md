@@ -17,6 +17,22 @@
 
 ## Verify changes
 
+Use local source checks as the normal verification path:
+
+```sh
+python3 tools/check_source_tree.py
+./dev doctor
+./dev build
+./dev test
+```
+
+The source-check GitHub Actions workflow is manual-only and is disabled in the
+repository settings. Do not enable or dispatch it, or add automatic push, pull
+request, or scheduled runs, without an explicit user request. Local verification
+of the proposed commit is sufficient evidence for review and merge; do not wait
+for redundant CI when those checks pass. Never run untrusted public pull request
+code automatically on a personal self-hosted runner.
+
 For default-profile changes, run:
 
 ```sh

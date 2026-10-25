@@ -59,12 +59,14 @@ Doctor should report `OK` for ARM GCC, ARM objcopy, ARM size, Make, Clang, Pytho
 
 The launcher stores local emulator saves, states, screenshots, and logs in `.local/play/diablo2/`.
 
-Default build and test checks are local-first: run `./dev doctor`, `./dev build`,
-and `./dev test` on your machine. The source-check workflow is manual-only and
-uses a standard GitHub-hosted Ubuntu runner when explicitly dispatched; it does
-not run automatically for pushes or pull requests. Enabling or dispatching
-GitHub Actions checks requires an explicit request. Prefer the local results
-when they are sufficient instead of waiting for a redundant Actions run.
+Default checks are local-first: run `python3 tools/check_source_tree.py`,
+`./dev doctor`, `./dev build`, and `./dev test` on your machine. GitHub Actions
+is disabled in the repository settings, and the source-check workflow is
+manual-only; it uses a standard GitHub-hosted Ubuntu runner if explicitly
+enabled and dispatched. It does not run automatically for pushes or pull
+requests. Enabling it, dispatching it, or adding automatic triggers requires an
+explicit request. Local verification of the proposed commit is sufficient for
+review; do not wait for a redundant Actions run.
 
 ## Optional Den profile
 
